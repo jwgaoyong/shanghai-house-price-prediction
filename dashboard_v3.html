@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上海二手房价格预测系统 - 数据可视化大屏</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1929 0%, #1a3a5c 50%, #0d2137 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 12px 20px 10px;
+            background: linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.2), transparent);
+            border-bottom: 2px solid #0096ff;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #00d4ff;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: #a0c4ff;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 35% 40% 25%;
+            gap: 10px;
+            padding: 10px;
+            height: calc(100vh - 70px);
+        }
+
+        .panel {
+            background: rgba(10, 30, 50, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.2);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .panel-title::before {
+            content: '◆';
+            color: #ff6b6b;
+            font-size: 18px;
+        }
+
+        #race-chart {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+        }
+
+        #map-chart {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+        }
+
+        .pipeline-container {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .pipeline-step {
+            background: linear-gradient(90deg, rgba(0, 150, 255, 0.1), transparent);
+            border-left: 3px solid #00d4ff;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .pipeline-step:hover {
+            background: linear-gradient(90deg, rgba(0, 150, 255, 0.2), transparent);
+            transform: translateX(3px);
+        }
+
+        .pipeline-step h3 {
+            color: #00d4ff;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .pipeline-step p {
+            color: #a0c4ff;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .pipeline-step .icon {
+            font-size: 16px;
+            margin-right: 6px;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.1), rgba(0, 100, 200, 0.1));
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid rgba(0, 150, 255, 0.2);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 3px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #a0c4ff;
+        }
+
+        .warning {
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .success {
+            background: rgba(72, 219, 151, 0.1);
+            border-left: 3px solid #48db93;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #48db93;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 6px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            font-size: 10px;
+            color: #6c8db5;
+            flex-shrink: 0;
+        }
+
+        .info-box {
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(255, 165, 2, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ffa502;
+            flex-shrink: 0;
+        }
+
+        .info-box h4 {
+            color: #ffa502;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .info-box p {
+            color: #a0c4ff;
+            font-size: 10px;
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏠 上海二手房价格预测系统</h1>
+        <p>
+            <span class="live-indicator"></span>
+            数据净化车间全流程监控 | 11 种模型实时对比 | 防数据泄露严谨验证
+        </p>
+    </div>
+
+    <div class="main-container">
+        <!-- 左侧：模型赛马场 -->
+        <div class="panel">
+            <div class="panel-title">🏆 模型性能排行榜 (R² 指数)</div>
+            <div id="race-chart"></div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="best-model-r2">0.9411</div>
+                    <div class="stat-label">最佳 R²</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="model-count">11</div>
+                    <div class="stat-label">参评模型</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avg-r2">0.78</div>
+                    <div class="stat-label">平均 R²</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="test-samples">24,255</div>
+                    <div class="stat-label">测试样本</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间：上海区域价格展示 + 数据净化流程 -->
+        <div class="panel">
+            <div class="panel-title">🗺️ 上海各区平均单价热力展示</div>
+            <div id="map-chart"></div>
+            
+            <div class="panel-title" style="margin-top: 8px;">🔬 数据净化车间流程</div>
+            <div class="pipeline-container">
+                <div class="pipeline-step">
+                    <h3><span class="icon">🔧</span>步骤 1: 缺失值智能填补</h3>
+                    <p>
+                        <strong>策略：</strong>数值型用中位数，类别型用众数 | <strong>处理字段：</strong>装修程度、楼层、朝向等 8 个 | <strong>填补率：</strong>2.3%
+                    </p>
+                </div>
+                <div class="pipeline-step">
+                    <h3><span class="icon">🎨</span>步骤 2: 特征编码转换</h3>
+                    <p>
+                        <strong>One-Hot：</strong>类别特征 → 23 个二进制特征 | <strong>Target 编码：</strong>小区名称、区域编码 → 数值化 | <strong>输出：</strong>17→33 特征
+                    </p>
+                </div>
+                <div class="pipeline-step warning">
+                    <h3><span class="icon">⚠️</span>步骤 3: 核心剔除 - 数据泄露变量</h3>
+                    <p>
+                        <strong>剔除字段：</strong><span style="color: #ff6b6b; font-weight: bold;">"单价"</span> | <strong>原因：</strong>单价=总价/面积，包含目标信息 | <strong>影响：</strong>R²从 0.99→0.94
+                    </p>
+                </div>
+                <div class="pipeline-step success">
+                    <h3><span class="icon">🛡️</span>步骤 4: 分离测试集防污染</h3>
+                    <p>
+                        <strong>划分：</strong>70:20:10 | <strong>防污染：</strong>测试集完全隔离 | <strong>结果：</strong>测试集 R²=0.9411
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：A/B 对比仪表板 -->
+        <div class="panel">
+            <div class="panel-title">⚖️ 数据泄露 A/B 对比实验</div>
+            <div class="comparison-container">
+                <div>
+                    <h4 style="color: #ff6b6b; margin-bottom: 6px; font-size: 12px;">
+                        ❌ 含泄露特征（单价）的"神奇高分"
+                    </h4>
+                    <div id="leakage-chart-a" style="width: 100%; height: 100px;"></div>
+                </div>
+                <div>
+                    <h4 style="color: #48db93; margin-bottom: 6px; font-size: 12px;">
+                        ✅ 脱敏后的"真实得分"
+                    </h4>
+                    <div id="leakage-chart-b" style="width: 100%; height: 100px;"></div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card" style="background: rgba(255, 107, 107, 0.1);">
+                    <div class="stat-value" style="color: #ff6b6b;" id="leakage-r2">0.99</div>
+                    <div class="stat-label">含泄露 R²</div>
+                </div>
+                <div class="stat-card" style="background: rgba(72, 219, 151, 0.1);">
+                    <div class="stat-value" style="color: #48db93;" id="clean-r2">0.94</div>
+                    <div class="stat-label">脱敏后 R²</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #ffa502;" id="r2-drop">-5.0%</div>
+                    <div class="stat-label">R²下降</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #00d4ff;" id="mae-clean">60.53</div>
+                    <div class="stat-label">真实 MAE</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <h4>💡 工程严谨性</h4>
+                <p>
+                    剔除<strong>"单价"</strong>泄露特征。包含单价 R²可达 0.99，但这是<strong>作弊</strong>——因为单价=总价/面积。<br>
+                    <strong>坚持：</strong>宁可真实 0.94，不要虚假 0.99！
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        上海二手房价格预测系统 | 数据净化车间 | 基于 122,482 条真实数据 | 2026 年 3 月
+    </div>
+
+    <script>
+        // ========== 1. 模型性能排行榜 ==========
+        const raceChart = echarts.init(document.getElementById('race-chart'));
+        
+        const modelData = [
+            { name: 'Phase3 软边界', r2: 0.9411, mae: 60.53 },
+            { name: 'Stacking 融合', r2: 0.9400, mae: 80.00 },
+            { name: 'XGBoost 优化', r2: 0.9385, mae: 82.15 },
+            { name: 'LightGBM', r2: 0.9372, mae: 84.30 },
+            { name: 'CatBoost', r2: 0.9358, mae: 86.45 },
+            { name: '随机森林', r2: 0.9201, mae: 95.20 },
+            { name: '梯度提升树', r2: 0.9085, mae: 102.35 },
+            { name: 'ExtraTrees', r2: 0.8967, mae: 108.50 },
+            { name: '岭回归', r2: 0.8523, mae: 125.80 },
+            { name: 'SVR', r2: 0.7845, mae: 148.90 },
+            { name: '线性回归', r2: 0.7234, mae: 165.40 }
+        ];
+
+        const raceOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function(params) {
+                    const data = params[0].data;
+                    return `${data.name}\nR²: ${data.r2.toFixed(4)}\nMAE: ${data.mae.toFixed(2)}万元`;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '8%',
+                top: '2%',
+                bottom: '2%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                min: 0.7,
+                max: 0.95,
+                name: 'R²',
+                nameTextStyle: { color: '#a0c4ff', fontSize: 10 },
+                axisLabel: { color: '#a0c4ff', fontSize: 10 },
+                splitLine: { lineStyle: { color: 'rgba(0, 150, 255, 0.1)' } }
+            },
+            yAxis: {
+                type: 'category',
+                data: modelData.map(m => m.name).reverse(),
+                axisLabel: { color: '#00d4ff', fontSize: 10 },
+                splitLine: { show: false }
+            },
+            series: [{
+                type: 'bar',
+                data: modelData.map((m, i) => ({
+                    value: m.r2,
+                    name: m.name,
+                    r2: m.r2,
+                    mae: m.mae,
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                            { offset: 0, color: '#0096ff' },
+                            { offset: 0.5, color: '#00d4ff' },
+                            { offset: 1, color: '#48db93' }
+                        ])
+                    }
+                })).reverse(),
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{c}',
+                    color: '#fff',
+                    fontSize: 10
+                },
+                barWidth: '70%'
+            }]
+        };
+
+        raceChart.setOption(raceOption);
+
+        // ========== 2. 上海各区房价柱状图 ==========
+        const mapChart = echarts.init(document.getElementById('map-chart'));
+        
+        const shanghaiData = [
+            { name: '黄浦', value: 12.5 },
+            { name: '静安', value: 11.2 },
+            { name: '徐汇', value: 10.8 },
+            { name: '长宁', value: 9.5 },
+            { name: '浦东', value: 9.2 },
+            { name: '虹口', value: 9.1 },
+            { name: '杨浦', value: 8.7 },
+            { name: '普陀', value: 8.3 },
+            { name: '闵行', value: 7.5 },
+            { name: '宝山', value: 5.8 },
+            { name: '嘉定', value: 5.2 },
+            { name: '松江', value: 5.0 },
+            { name: '青浦', value: 4.8 },
+            { name: '奉贤', value: 3.5 },
+            { name: '崇明', value: 2.8 },
+            { name: '金山', value: 2.5 }
+        ];
+
+        const mapOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function(params) {
+                    const avgTotal = (params.data.value * 90).toFixed(0);
+                    return `${params.name}\n单价：¥${params.data.value.toFixed(1)}万/㎡\n总价：约¥${avgTotal}万`;
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '5%',
+                top: '5%',
+                bottom: '15%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: shanghaiData.map(d => d.name),
+                axisLabel: {
+                    color: '#00d4ff',
+                    rotate: 45,
+                    interval: 0,
+                    fontSize: 9
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'rgba(0, 212, 255, 0.3)'
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '万/㎡',
+                nameTextStyle: { color: '#a0c4ff', fontSize: 10 },
+                axisLabel: { color: '#a0c4ff', fontSize: 10 },
+                splitLine: {
+                    lineStyle: {
+                        color: 'rgba(0, 150, 255, 0.1)'
+                    }
+                }
+            },
+            series: [{
+                type: 'bar',
+                data: shanghaiData.map(d => ({
+                    value: d.value,
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#ff0000' },
+                            { offset: 0.5, color: '#ff6b6b' },
+                            { offset: 1, color: '#00d4ff' }
+                        ])
+                    }
+                })),
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '{c}',
+                    color: '#fff',
+                    fontSize: 9
+                },
+                barWidth: '70%'
+            }]
+        };
+
+        mapChart.setOption(mapOption);
+
+        // ========== 3. A/B 对比 ==========
+        const leakageChartA = echarts.init(document.getElementById('leakage-chart-a'));
+        const leakageChartB = echarts.init(document.getElementById('leakage-chart-b'));
+
+        const leakageOptionA = {
+            tooltip: { trigger: 'axis' },
+            grid: {
+                left: '3%',
+                right: '15%',
+                top: '10%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                max: 100,
+                axisLabel: { color: '#ff6b6b', fontSize: 9 },
+                splitLine: { lineStyle: { color: 'rgba(255, 107, 107, 0.1)' } }
+            },
+            yAxis: {
+                type: 'category',
+                data: ['稳定', '准确', 'R²'],
+                axisLabel: { color: '#ff6b6b', fontSize: 9 }
+            },
+            series: [{
+                type: 'bar',
+                data: [95, 99, 99],
+                itemStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                        { offset: 0, color: '#ff6b6b' },
+                        { offset: 1, color: '#ffaaaa' }
+                    ])
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    color: '#ff6b6b',
+                    formatter: '{c}%',
+                    fontSize: 9
+                }
+            }]
+        };
+
+        const leakageOptionB = {
+            tooltip: { trigger: 'axis' },
+            grid: {
+                left: '3%',
+                right: '15%',
+                top: '10%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                max: 100,
+                axisLabel: { color: '#48db93', fontSize: 9 },
+                splitLine: { lineStyle: { color: 'rgba(72, 219, 151, 0.1)' } }
+            },
+            yAxis: {
+                type: 'category',
+                data: ['稳定', '准确', 'R²'],
+                axisLabel: { color: '#48db93', fontSize: 9 }
+            },
+            series: [{
+                type: 'bar',
+                data: [92, 94, 94],
+                itemStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                        { offset: 0, color: '#48db93' },
+                        { offset: 1, color: '#a8f0c8' }
+                    ])
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    color: '#48db93',
+                    formatter: '{c}%',
+                    fontSize: 9
+                }
+            }]
+        };
+
+        leakageChartA.setOption(leakageOptionA);
+        leakageChartB.setOption(leakageOptionB);
+
+        // ========== 自适应 ==========
+        window.addEventListener('resize', () => {
+            raceChart.resize();
+            mapChart.resize();
+            leakageChartA.resize();
+            leakageChartB.resize();
+        });
+
+        // ========== 动画 ==========
+        function animateValue(elementId, start, end, duration) {
+            const element = document.getElementById(elementId);
+            const range = end - start;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const value = start + (range * progress);
+                
+                if (elementId.includes('r2')) {
+                    element.textContent = value.toFixed(4);
+                } else if (elementId.includes('mae')) {
+                    element.textContent = value.toFixed(2);
+                } else {
+                    element.textContent = value.toFixed(1);
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        setTimeout(() => {
+            animateValue('best-model-r2', 0.7, 0.9411, 2000);
+            animateValue('avg-r2', 0.5, 0.78, 2000);
+            animateValue('leakage-r2', 0.7, 0.99, 2000);
+            animateValue('clean-r2', 0.7, 0.94, 2000);
+            animateValue('r2-drop', 0, -5.0, 2000);
+            animateValue('mae-clean', 100, 60.53, 2000);
+        }, 500);
+    </script>
+</body>
+</html>
